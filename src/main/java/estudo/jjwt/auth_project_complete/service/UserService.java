@@ -2,17 +2,22 @@ package estudo.jjwt.auth_project_complete.service;
 
 import estudo.jjwt.auth_project_complete.entity.User;
 import estudo.jjwt.auth_project_complete.repository.UserRepository;
+import estudo.jjwt.auth_project_complete.service.exception.DbException;
 import estudo.jjwt.auth_project_complete.service.exception.DuplicatedEmailException;
 import estudo.jjwt.auth_project_complete.service.exception.InvalidPasswordException;
 import estudo.jjwt.auth_project_complete.service.exception.UserNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class UserService {
 
     private final UserRepository repository;
@@ -20,10 +25,15 @@ public class UserService {
 
     @Transactional
     public User insert(User user) {
-        if (repository.findByEmail(user.getEmail()) != null){
-            throw new DuplicatedEmailException(String.format("A user with email '%s' already exists", user.getEmail()));
+        try {
+            if (repository.findByEmail(user.getEmail()) != null) {
+                throw new DuplicatedEmailException(String.format("A user with email '%s' already exists", user.getEmail()));
+            }
+            return repository.save(user);
+        }catch(DataIntegrityViolationException e){
+            log.error("Failed to insert user, exception message: ", e.getMessage());
+            throw new DbException("Failed to insert user '" + user.getEmail() + "'");
         }
-        return repository.save(user);
     }
 
     @Transactional(readOnly = true)
