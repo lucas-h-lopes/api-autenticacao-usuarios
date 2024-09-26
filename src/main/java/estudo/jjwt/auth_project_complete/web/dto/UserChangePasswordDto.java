@@ -6,7 +6,6 @@ import lombok.*;
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @ToString
 public class UserChangePasswordDto {
 
-    @Size(min = 5, max = 10, message = "Password must contain 5 to 10 characters")
     private String currentPassword;
     @Size(min = 5, max = 10, message = "New password must contain 5 to 10 characters")
     private String newPassword;
