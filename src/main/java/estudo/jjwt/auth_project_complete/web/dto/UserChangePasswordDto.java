@@ -10,6 +10,6 @@ public class UserChangePasswordDto {
     private String currentPassword;
     @Size(min = 5, max = 10, message = "New password must contain 5 to 10 characters")
     private String newPassword;
-    @Size(min = 5, max = 10, message = "New password must contain 5 to 10 characters")
+    @Size(min = 5, max = 10, message = "Confirm password must contain 5 to 10 characters")
     private String confirmPassword;
 }
