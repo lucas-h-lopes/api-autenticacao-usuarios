@@ -9,10 +9,10 @@ import estudo.jjwt.auth_project_complete.service.exception.UserNotFoundException
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.List;
 
 @Service
@@ -20,18 +20,23 @@ import java.util.List;
 @Slf4j
 public class UserService {
 
+
+    private final PasswordEncoder passwordEncoder;
     private final UserRepository repository;
     private final String USER_NOT_FOUND_ID_MESSAGE = "User with id '%d' was not found";
+    private final String USER_NOT_FOUND_EMAIL_MESSAGE = "User with email '%s' was not found";
 
     @Transactional
     public User insert(User user) {
         try {
             if (repository.findByEmail(user.getEmail()) != null) {
+                log.error("Email {} already exists", user.getEmail());
                 throw new DuplicatedEmailException(String.format("A user with email '%s' already exists", user.getEmail()));
             }
+            user.setPassword(passwordEncoder.encode(user.getPassword()));
             return repository.save(user);
-        }catch(DataIntegrityViolationException e){
-            log.error("Failed to insert user, exception message: ", e.getMessage());
+        } catch (DataIntegrityViolationException e) {
+            log.warn("Failed to insert user, exception message: ", e.getMessage());
             throw new DbException("Failed to insert user '" + user.getEmail() + "'");
         }
     }
@@ -65,20 +70,33 @@ public class UserService {
 
         validatePassword(dbUser, currentPassword, newPassword, confirmPassword);
 
-        dbUser.setPassword(newPassword);
         repository.save(dbUser);
     }
 
     private void validatePassword(User user, String currentPassword, String newPassword, String confirmPassword) {
-        if (!user.getPassword().equals(currentPassword)) {
+        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+            log.warn("Failed to change password: Invalid current password");
             throw new InvalidPasswordException("Current password does not match");
         }
-        if (user.getPassword().equals(newPassword)) {
+        if (passwordEncoder.matches(newPassword, user.getPassword())) {
+            log.warn("Failed to change password: New password is equal to current password");
             throw new InvalidPasswordException("New password is equal to current password");
         }
         if (!newPassword.equals(confirmPassword)) {
+            log.error("Failed to change password: Passwords are not equal");
             throw new InvalidPasswordException("Passwords does not match");
         }
+        user.setPassword(passwordEncoder.encode(newPassword));
     }
 
+    @Transactional(readOnly = true)
+    public User loadUserByEmail(String email) {
+        User u = repository.findByEmail(email);
+        return u;
+    }
+
+    @Transactional(readOnly = true)
+    public User.Role getRoleByEmail(String email) {
+        return repository.findRoleByEmail(email);
+    }
 }
