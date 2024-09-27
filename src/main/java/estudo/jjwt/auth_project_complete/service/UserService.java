@@ -99,4 +99,5 @@ public class UserService {
     public User.Role getRoleByEmail(String email) {
         return repository.findRoleByEmail(email);
     }
+
 }
