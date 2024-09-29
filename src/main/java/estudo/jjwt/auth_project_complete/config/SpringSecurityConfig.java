@@ -29,7 +29,10 @@ public class SpringSecurityConfig {
                 .httpBasic(x -> x.disable())
                 .authorizeHttpRequests(x ->
                         x.requestMatchers(antMatcher(HttpMethod.POST, "/api/v2/users"),
-                                        antMatcher(HttpMethod.POST, "/api/v2/auth")).permitAll()
+                                        antMatcher(HttpMethod.POST, "/api/v2/auth"),
+                                        antMatcher("/v3/api-docs/**"),
+                                        antMatcher("/documentacao/**"),
+                                        antMatcher("/swagger-ui/**")).permitAll()
                                 .anyRequest().authenticated())
                 .sessionManagement(x -> x.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(requestFilter(), UsernamePasswordAuthenticationFilter.class)
