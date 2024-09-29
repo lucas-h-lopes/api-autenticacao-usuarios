@@ -30,7 +30,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(InvalidPasswordException.class)
-    public ResponseEntity<CustomExceptionBody> duplicatedEmailException(InvalidPasswordException e, HttpServletRequest request){
+    public ResponseEntity<CustomExceptionBody> invalidPasswordException(InvalidPasswordException e, HttpServletRequest request){
         CustomExceptionBody ex = new CustomExceptionBody(request, HttpStatus.BAD_REQUEST, e.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex);
     }
