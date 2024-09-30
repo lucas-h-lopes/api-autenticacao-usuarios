@@ -20,7 +20,7 @@ import java.util.List;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Slf4j
 
-public class UserIT {
+public class UserItTest {
 
     @Autowired
     WebTestClient testClient;
