@@ -1,6 +1,5 @@
 package estudo.jjwt.auth_project_complete.jwt;
 
-import estudo.jjwt.auth_project_complete.entity.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
