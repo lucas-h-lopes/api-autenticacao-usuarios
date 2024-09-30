@@ -17,7 +17,7 @@ import java.util.Date;
 public class JwtUtils {
 
     private static final String SECRET_KEY = "01234567890-0987654321-123443211234-01235u23123";
-    private static final Integer MINUTES_TO_EXPIRE = 2;
+    private static final Integer MINUTES_TO_EXPIRE = 30;
 
     private JwtUtils() {
     }
