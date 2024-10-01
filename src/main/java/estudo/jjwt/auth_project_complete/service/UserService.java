@@ -9,17 +9,19 @@ import estudo.jjwt.auth_project_complete.service.exception.UserNotFoundException
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class UserService {
-
 
     private final PasswordEncoder passwordEncoder;
     private final UserRepository repository;
@@ -34,6 +36,7 @@ public class UserService {
                 throw new DuplicatedEmailException(String.format("A user with email '%s' already exists", user.getEmail()));
             }
             user.setPassword(passwordEncoder.encode(user.getPassword()));
+
             return repository.save(user);
         } catch (DataIntegrityViolationException e) {
             log.warn("Failed to insert user, exception message: ", e.getMessage());
@@ -99,5 +102,4 @@ public class UserService {
     public User.Role getRoleByEmail(String email) {
         return repository.findRoleByEmail(email);
     }
-
 }
