@@ -1,6 +1,5 @@
 package estudo.jjwt.auth_project_complete;
 
-import estudo.jjwt.auth_project_complete.jwt.JwtUtils;
 import estudo.jjwt.auth_project_complete.web.dto.UserChangePasswordDto;
 import estudo.jjwt.auth_project_complete.web.dto.UserCreateDto;
 import estudo.jjwt.auth_project_complete.web.dto.UserResponseDto;
@@ -11,39 +10,29 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
 import java.util.List;
+import java.util.Map;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Slf4j
-
+@Sql(scripts = "/sql/users/insert.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+@Sql(scripts = "/sql/users/delete.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
 public class UserItTest {
 
     @Autowired
     WebTestClient testClient;
 
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-
     private final String URI = "/api/v2/users";
 
-    private String getToken() {
-        String token = JwtUtils.generateToken("auth@gmail.com", "MIN_ACCESS").getToken();
-        return token;
-    }
-
     @Test
-    @Sql(scripts = "/sql/users/delete.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
     public void postUserCreate_validData_shouldBeStatus201() {
-        String token = getToken();
         UserResponseDto dto = testClient
                 .post().uri(URI)
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(new UserCreateDto("testee2@gmail.com", "123456"))
-                .header("Authorization", "Bearer " + token)
                 .exchange()
                 .expectStatus().isCreated()
                 .expectBody(UserResponseDto.class)
@@ -56,9 +45,6 @@ public class UserItTest {
     }
 
     @Test
-    @Sql(scripts = "/sql/users/delete.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
-    @Sql(scripts = "/sql/users/insert.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
-    @Sql(scripts = "/sql/users/delete.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
     public void postUser_invalidEmailFormat_shouldBeStatus400() {
 
         CustomExceptionBody result = testClient.post().uri(URI)
@@ -76,9 +62,6 @@ public class UserItTest {
     }
 
     @Test
-    @Sql(scripts = "/sql/users/delete.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
-    @Sql(scripts = "/sql/users/insert.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
-    @Sql(scripts = "/sql/users/delete.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
     public void postUser_invalidPasswordMinSize_shoudBeStatus400() {
 
         CustomExceptionBody result = testClient.post().uri(URI)
@@ -96,9 +79,6 @@ public class UserItTest {
     }
 
     @Test
-    @Sql(scripts = "/sql/users/delete.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
-    @Sql(scripts = "/sql/users/insert.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
-    @Sql(scripts = "/sql/users/delete.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
     public void postUser_invalidPasswordMaxSize_shoudBeStatus400() {
 
         CustomExceptionBody result = testClient.post().uri(URI)
@@ -116,15 +96,10 @@ public class UserItTest {
     }
 
     @Test
-    @Sql(scripts = "/sql/users/delete.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
-    @Sql(scripts = "/sql/users/insert.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
-    @Sql(scripts = "/sql/users/delete.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
     public void getUser_existingUser_shouldBeStatus200() {
-
-        String token = getToken();
         UserResponseDto dto = testClient.get()
-                .uri(URI + "/{id}", 2)
-                .header("Authorization", "Bearer " + token)
+                .uri(URI + "/{id}", 200)
+                .headers(JwtLogin.authenticate(testClient, "ana33@hotmail.com", "123456"))
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(UserResponseDto.class)
@@ -132,39 +107,79 @@ public class UserItTest {
 
         Assertions.assertThat(dto).isNotNull();
         Assertions.assertThat(dto.getEmail()).isEqualTo("ana33@hotmail.com");
-        Assertions.assertThat(dto.getId()).isEqualTo(2);
+        Assertions.assertThat(dto.getId()).isEqualTo(200);
         Assertions.assertThat(dto.getRole()).isEqualTo("MIN_ACCESS");
 
+        dto = testClient
+                .get()
+                .uri(URI + "/{id}", 200)
+                .headers(JwtLogin.authenticate(testClient, "admin@gmail.com", "123456"))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(UserResponseDto.class)
+                .returnResult().getResponseBody();
+        Assertions.assertThat(dto).isNotNull();
+        Assertions.assertThat(dto.getId()).isEqualTo(200);
+        Assertions.assertThat(dto.getRole()).isEqualTo("MIN_ACCESS");
+        Assertions.assertThat(dto.getEmail()).isEqualTo("ana33@hotmail.com");
+
+        dto = testClient
+                .get()
+                .uri(URI + "/{id}", 400)
+                .headers(JwtLogin.authenticate(testClient, "admin@gmail.com", "123456"))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(UserResponseDto.class)
+                .returnResult().getResponseBody();
+        Assertions.assertThat(dto).isNotNull();
+        Assertions.assertThat(dto.getEmail()).isEqualTo("admin@gmail.com");
+        Assertions.assertThat(dto.getId()).isEqualTo(400);
+        Assertions.assertThat(dto.getRole()).isEqualTo("ADMIN");
     }
 
     @Test
-    @Sql(scripts = "/sql/users/delete.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
-    @Sql(scripts = "/sql/users/insert.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
-    @Sql(scripts = "/sql/users/delete.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
-    public void getUser_nonexistentUser_shouldBeStatus404() {
+    public void getUser_minAccess_existingAnotherUser_shouldBeStatus403(){
+        CustomExceptionBody error = testClient.get()
+                .uri(URI + "/{id}", 300)
+                .headers(JwtLogin.authenticate(testClient,"ana33@hotmail.com", "123456"))
+                .exchange()
+                .expectStatus().isForbidden()
+                .expectBody(CustomExceptionBody.class)
+                .returnResult().getResponseBody();
+        Assertions.assertThat(error).isNotNull();
+    }
 
-        String token = getToken();
-        CustomExceptionBody result = testClient.get().uri(URI + "/{id}", 500)
-                .header("Authorization", "Bearer " + token)
+    @Test
+    public void getUser_noAuthenticatedUser_shouldBeStatus401(){
+        Map result = testClient
+                .get()
+                .uri(URI + "/{id}", 200)
+                .exchange()
+                .expectStatus().isUnauthorized()
+                .expectBody(Map.class)
+                .returnResult().getResponseBody();
+        Assertions.assertThat(result).isNotNull();
+        Assertions.assertThat(result.get("error")).isEqualTo("You must be authenticated to perform this action.");
+    }
+
+    @Test
+    public void getUser_nonexistentUser_shouldBeStatus404() {
+        CustomExceptionBody result = testClient.get().uri(URI + "/{id}", 6000)
+                .headers(JwtLogin.authenticate(testClient, "admin@gmail.com", "123456"))
                 .exchange()
                 .expectStatus().isEqualTo(404)
                 .expectBody(CustomExceptionBody.class)
                 .returnResult().getResponseBody();
 
         Assertions.assertThat(result).isNotNull();
-        Assertions.assertThat(result.getMessage()).isEqualTo(String.format("User with id '%d' was not found", 500));
-
+        Assertions.assertThat(result.getMessage()).isEqualTo(String.format("User with id '%d' was not found", 6000));
     }
 
     @Test
-    @Sql(scripts = "/sql/users/delete.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
-    @Sql(scripts = "/sql/users/insert.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
-    @Sql(scripts = "/sql/users/delete.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
     public void getAllUser_dbHasUsers_shouldBeStatus200() {
 
-        String token = getToken();
         List<UserResponseDto> dtos = testClient.get().uri(URI)
-                .header("Authorization", "Bearer " + token)
+                .headers(JwtLogin.authenticate(testClient, "admin@gmail.com", "123456"))
                 .exchange()
                 .expectStatus().isOk()
                 .expectBodyList(UserResponseDto.class)
@@ -175,32 +190,94 @@ public class UserItTest {
     }
 
     @Test
-    @Sql(scripts = "/sql/users/delete.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
-    @Sql(scripts = "/sql/users/insert.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
-    @Sql(scripts = "/sql/users/delete.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
-    public void putUser_validData_shouldBeStatus204() {
+    public void getUsers_unauthenticatedUser_shouldBeStatus401(){
+        Map result = testClient.get()
+                .uri(URI)
+                .exchange()
+                .expectStatus().isUnauthorized()
+                .expectBody(Map.class)
+                .returnResult().getResponseBody();
 
-        String token = getToken();
-        testClient.put().uri(URI + "/{id}", 1).contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(new UserChangePasswordDto("5513aB@", "123456", "123456"))
-                .header("Authorization", "Bearer " + token)
+        Assertions.assertThat(result).isNotNull();
+        Assertions.assertThat(result.get("error")).isEqualTo("You must be authenticated to perform this action.");
+    }
+
+    @Test
+    public void getUsers_minAccess_shouldBeStatus403(){
+        CustomExceptionBody error = testClient
+                .get()
+                .uri(URI)
+                .headers(JwtLogin.authenticate(testClient, "ana33@hotmail.com", "123456"))
+                .exchange()
+                .expectStatus().isForbidden()
+                .expectBody(CustomExceptionBody.class)
+                .returnResult().getResponseBody();
+        Assertions.assertThat(error).isNotNull();
+    }
+
+    @Test
+    public void putUser_validData_shouldBeStatus204() {
+        testClient.put().uri(URI + "/{id}", 200)
+                .contentType(MediaType.APPLICATION_JSON)
+                .headers(JwtLogin.authenticate(testClient, "ana33@hotmail.com", "123456"))
+                .bodyValue(new UserChangePasswordDto("123456", "123455", "123455"))
                 .exchange()
                 .expectStatus().isNoContent()
                 .expectBody(Void.class)
                 .returnResult().getResponseBody();
 
+        testClient.put()
+                .uri(URI + "/{id}", 400)
+                .headers(JwtLogin.authenticate(testClient, "admin@gmail.com", "123456"))
+                .bodyValue(new UserChangePasswordDto("123456", "123455", "123455"))
+                .exchange()
+                .expectStatus().isNoContent()
+                .expectBody(Void.class)
+                .returnResult().getResponseBody();
     }
 
     @Test
-    @Sql(scripts = "/sql/users/delete.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
-    @Sql(scripts = "/sql/users/insert.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
-    @Sql(scripts = "/sql/users/delete.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
-    public void putUser_invalidCurrentPassword_shouldBeStatus400() {
+    public void putUser_unauthenticatedUser_shouldBeStatus401(){
+        Map error = testClient
+                .put()
+                .uri(URI + "/{}", 200)
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(new UserChangePasswordDto("123456", "123455", "123455"))
+                .exchange()
+                .expectStatus().isUnauthorized()
+                .expectBody(Map.class)
+                .returnResult().getResponseBody();
+        Assertions.assertThat(error).isNotNull();
+        Assertions.assertThat(error.get("error")).isEqualTo("You must be authenticated to perform this action.");
+    }
 
-        String token = getToken();
-        CustomExceptionBody result = testClient.put().uri(URI + "/{id}", 1)
+    @Test
+    public void putUser_differentUser_shouldBeStatus403(){
+        testClient.put()
+                .uri(URI + "/{id}", 300)
+                .headers(JwtLogin.authenticate(testClient, "ana33@hotmail.com", "123456"))
+                .bodyValue(new UserChangePasswordDto("123456","123455","123455"))
+                .exchange()
+                .expectStatus().isForbidden()
+                .expectBody(CustomExceptionBody.class)
+                .returnResult()
+                .getResponseBody();
+
+        testClient.put()
+                .uri(URI + "/{id}", 300)
+                .headers(JwtLogin.authenticate(testClient, "admin@gmail.com", "123456"))
+                .bodyValue(new UserChangePasswordDto("123456","123455","123455"))
+                .exchange()
+                .expectStatus().isForbidden()
+                .expectBody(CustomExceptionBody.class)
+                .returnResult().getResponseBody();
+    }
+
+    @Test
+    public void putUser_invalidCurrentPassword_shouldBeStatus400() {
+        CustomExceptionBody result = testClient.put().uri(URI + "/{id}", 200)
+                .headers(JwtLogin.authenticate(testClient, "ana33@hotmail.com", "123456"))
                 .bodyValue(new UserChangePasswordDto("123", "123456", "123456"))
-                .header("Authorization", "Bearer " + token)
                 .exchange()
                 .expectStatus().isEqualTo(400)
                 .expectBody(CustomExceptionBody.class)
@@ -212,15 +289,11 @@ public class UserItTest {
     }
 
     @Test
-    @Sql(scripts = "/sql/users/delete.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
-    @Sql(scripts = "/sql/users/insert.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
-    @Sql(scripts = "/sql/users/delete.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
     public void putUser_newPasswordDoesNotMatch_shouldBeStatus400() {
 
-        String token = getToken();
-        CustomExceptionBody result = testClient.put().uri(URI + "/{id}", 1)
-                .bodyValue(new UserChangePasswordDto("5513aB@", "123456", "123455"))
-                .header("Authorization", "Bearer " + token)
+        CustomExceptionBody result = testClient.put().uri(URI + "/{id}", 200)
+                .headers(JwtLogin.authenticate(testClient, "ana33@hotmail.com", "123456"))
+                .bodyValue(new UserChangePasswordDto("123456", "123455", "123457"))
                 .exchange()
                 .expectStatus().isEqualTo(400)
                 .expectBody(CustomExceptionBody.class)
@@ -231,15 +304,10 @@ public class UserItTest {
     }
 
     @Test
-    @Sql(scripts = "/sql/users/delete.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
-    @Sql(scripts = "/sql/users/insert.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
-    @Sql(scripts = "/sql/users/delete.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
     public void putUser_newPasswordSameAsCurrentPassword_shouldBeStatus400() {
-
-        String token = getToken();
-        CustomExceptionBody result = testClient.put().uri(URI + "/{id}", 1)
-                .bodyValue(new UserChangePasswordDto("5513aB@", "5513aB@", "5513aB@"))
-                .header("Authorization", "Bearer " + token)
+        CustomExceptionBody result = testClient.put().uri(URI + "/{id}", 200)
+                .headers(JwtLogin.authenticate(testClient, "ana33@hotmail.com", "123456"))
+                .bodyValue(new UserChangePasswordDto("123456", "123456", "123456"))
                 .exchange()
                 .expectStatus().isEqualTo(400)
                 .expectBody(CustomExceptionBody.class)
@@ -250,15 +318,10 @@ public class UserItTest {
     }
 
     @Test
-    @Sql(scripts = "/sql/users/delete.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
-    @Sql(scripts = "/sql/users/insert.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
-    @Sql(scripts = "/sql/users/delete.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
     public void putUser_newPasswordInvalidMinSize_shouldBeStatus400() {
-
-        String token = getToken();
-        CustomExceptionBody result = testClient.put().uri(URI + "/{id}", 1)
-                .bodyValue(new UserChangePasswordDto("5513aB@", "1234", "1234"))
-                .header("Authorization", "Bearer " + token)
+        CustomExceptionBody result = testClient.put().uri(URI + "/{id}", 200)
+                .bodyValue(new UserChangePasswordDto("123456", "1234", "1234"))
+                .headers(JwtLogin.authenticate(testClient, "ana33@hotmail.com", "123456"))
                 .exchange()
                 .expectStatus().isEqualTo(400)
                 .expectBody(CustomExceptionBody.class)
@@ -271,15 +334,10 @@ public class UserItTest {
     }
 
     @Test
-    @Sql(scripts = "/sql/users/delete.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
-    @Sql(scripts = "/sql/users/insert.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
-    @Sql(scripts = "/sql/users/delete.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
     public void putUser_newPasswordInvalidMaxSize_shouldBeStatus400() {
-
-        String token = getToken();
-        CustomExceptionBody result = testClient.put().uri(URI + "/{id}", 1)
-                .bodyValue(new UserChangePasswordDto("5513aB@", "12345678900", "12345678900"))
-                .header("Authorization", "Bearer " + token)
+        CustomExceptionBody result = testClient.put().uri(URI + "/{id}", 200)
+                .bodyValue(new UserChangePasswordDto("123456", "12345678900", "12345678900"))
+                .headers(JwtLogin.authenticate(testClient, "ana33@hotmail.com", "123456"))
                 .exchange()
                 .expectStatus().isEqualTo(400)
                 .expectBody(CustomExceptionBody.class)
@@ -292,49 +350,50 @@ public class UserItTest {
     }
 
     @Test
-    @Sql(scripts = "/sql/users/delete.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
-    @Sql(scripts = "/sql/users/insert.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
-    @Sql(scripts = "/sql/users/delete.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
-    public void putUser_nonexistentUser_shouldBeStatus404() {
-
-        String token = getToken();
-        CustomExceptionBody result = testClient.put().uri(URI + "/{id}", 30)
-                .bodyValue(new UserChangePasswordDto("5513aB@", "123456", "123456"))
-                .header("Authorization", "Bearer " + token)
-                .exchange()
-                .expectStatus().isEqualTo(404)
-                .expectBody(CustomExceptionBody.class)
-                .returnResult().getResponseBody();
-
-        Assertions.assertThat(result).isNotNull();
-        Assertions.assertThat(result.getMessage()).isEqualTo(String.format("User with id '%d' was not found", 30));
-    }
-
-    @Test
-    @Sql(scripts = "/sql/users/delete.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
-    @Sql(scripts = "/sql/users/insert.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
-    @Sql(scripts = "/sql/users/delete.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
     public void deleteUser_existingUser_shouldBeStatus204() {
-
-        String token = getToken();
-        testClient.delete().uri(URI + "/{id}", 1)
-                .header("Authorization", "Bearer " + token)
+        testClient.delete().uri(URI + "/{id}", 200)
+                .headers(JwtLogin.authenticate(testClient, "ana33@hotmail.com", "123456"))
                 .exchange()
                 .expectStatus().isEqualTo(204)
                 .expectBody(Void.class)
                 .returnResult().getResponseBody();
 
+        testClient.delete()
+                .uri(URI + "/{id}", 100)
+                .headers(JwtLogin.authenticate(testClient, "admin@gmail.com", "123456"))
+                .exchange()
+                .expectStatus().isNoContent()
+                .expectBody(Void.class)
+                .returnResult().getResponseBody();
+
+        testClient.delete()
+                .uri(URI + "/{id}", 400)
+                .headers(JwtLogin.authenticate(testClient, "admin@gmail.com", "123456"))
+                .exchange()
+                .expectStatus().isEqualTo(204)
+                .expectBody(Void.class)
+                .returnResult().getResponseBody();
     }
 
     @Test
-    @Sql(scripts = "/sql/users/delete.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
-    @Sql(scripts = "/sql/users/insert.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
-    @Sql(scripts = "/sql/users/delete.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
+    public void deleteUser_differentUser_shouldBeStatus403(){
+        CustomExceptionBody error = testClient.delete()
+                .uri(URI + "/{id}", 100)
+                .headers(JwtLogin.authenticate(testClient, "ana33@hotmail.com", "123456"))
+                .exchange()
+                .expectStatus().isForbidden()
+                .expectBody(CustomExceptionBody.class)
+                .returnResult().getResponseBody();
+
+        Assertions.assertThat(error).isNotNull();
+        Assertions.assertThat(error.getStatus()).isEqualTo(403);
+    }
+
+    @Test
     public void deleteUser_nonexistentUser_shouldBeStatus404() {
 
-        String token = getToken();
         CustomExceptionBody result = testClient.delete().uri(URI + "/{id}", 50)
-                .header("Authorization", "Bearer " + token)
+                .headers(JwtLogin.authenticate(testClient, "admin@gmail.com", "123456"))
                 .exchange()
                 .expectStatus().isEqualTo(404)
                 .expectBody(CustomExceptionBody.class)
