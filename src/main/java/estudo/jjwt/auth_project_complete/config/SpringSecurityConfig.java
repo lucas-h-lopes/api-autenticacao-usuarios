@@ -1,5 +1,6 @@
 package estudo.jjwt.auth_project_complete.config;
 
+import estudo.jjwt.auth_project_complete.jwt.JwtAuthEntryPoint;
 import estudo.jjwt.auth_project_complete.jwt.JwtAuthorizationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -35,6 +36,7 @@ public class SpringSecurityConfig {
                                         antMatcher("/swagger-ui/**")).permitAll()
                                 .anyRequest().authenticated())
                 .sessionManagement(x -> x.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(x -> x.authenticationEntryPoint(new JwtAuthEntryPoint()))
                 .addFilterBefore(requestFilter(), UsernamePasswordAuthenticationFilter.class)
                 .build();
     }

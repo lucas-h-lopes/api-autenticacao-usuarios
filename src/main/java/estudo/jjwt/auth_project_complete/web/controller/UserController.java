@@ -12,10 +12,12 @@ import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -28,32 +30,40 @@ public class UserController {
     @Autowired
     private UserService service;
 
-    @Operation(summary = "Lista um usuário", description = "Busca o usuário pelo seu Id e retorna ao cliente.", responses = {
+    @Operation(summary = "Lista um usuário", description = "Busca o usuário pelo seu Id e retorna ao cliente.",
+            security = @SecurityRequirement(name = "security"),
+            responses = {
             @ApiResponse(responseCode = "200", description = "Usuário encontrado com sucesso!", content = {
                     @Content(mediaType = "application/json", schema = @Schema(implementation = UserResponseDto.class))
             }),
             @ApiResponse(responseCode = "404", description = "Usuário não encontrado.", content = {
                     @Content(mediaType = "application/json", schema = @Schema(implementation = CustomExceptionBody.class))
             }),
-            @ApiResponse(responseCode = "403", description = "Acesso negado.", content = {
-                    @Content(schema = @Schema(implementation = Void.class))
+            @ApiResponse(responseCode = "403", description = "Usuário possui permissão insuficiente.", content = {
+                    @Content(schema = @Schema(implementation = CustomExceptionBody.class))
             })
     })
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('ADMIN') " +
+            "or (hasAuthority('MIN_ACCESS') " +
+            "and #id == authentication.principal.id)")
     public ResponseEntity<UserResponseDto> getById(@PathVariable Long id){
         User user = service.findById(id);
         return ResponseEntity.ok(UserMapper.toResponseDto(user));
     }
 
-    @Operation(summary = "Lista todos os usuários", description = "Retorna todos os usuários cadastrados no banco de dados.", responses = {
+    @Operation(summary = "Lista todos os usuários", description = "Retorna todos os usuários cadastrados no banco de dados.",
+            security = @SecurityRequirement(name = "security"),
+            responses = {
             @ApiResponse(responseCode = "200", description = "Sucesso!", content = {
                     @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = UserResponseDto.class)))
             }),
-            @ApiResponse(responseCode = "403", description = "Acesso negado.", content = {
-                    @Content(schema = @Schema(implementation = Void.class))
+            @ApiResponse(responseCode = "403", description = "Usuário possui permissão insuficiente.", content = {
+                    @Content(schema = @Schema(implementation = CustomExceptionBody.class))
             })
     })
     @GetMapping
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<List<UserResponseDto>> getAll(){
         List<User> users = service.findAll();
         return ResponseEntity.ok(UserMapper.toListResponseDto(users));
@@ -76,24 +86,29 @@ public class UserController {
         return ResponseEntity.status(201).body(UserMapper.toResponseDto(service.insert(user)));
     }
 
-    @Operation(summary = "Deleta um usuário", description = "Remove um usuário do banco de dados pelo seu Id.", responses = {
+    @Operation(summary = "Deleta um usuário", description = "Remove um usuário do banco de dados pelo seu Id.",
+            security = @SecurityRequirement(name = "security"),
+            responses = {
             @ApiResponse(responseCode = "204", description = "Deletado com sucesso!", content = {
                     @Content(mediaType = "application/json", schema = @Schema(implementation = Void.class))
             }),
             @ApiResponse(responseCode = "404", description = "Usuário não encontrado.", content = {
                     @Content(mediaType = "application/json", schema = @Schema(implementation = CustomExceptionBody.class))
             }),
-            @ApiResponse(responseCode = "403", description = "Acesso negado.", content = {
-                    @Content(schema = @Schema(implementation = Void.class))
-            })
+                    @ApiResponse(responseCode = "403", description = "Usuário possui permissão insuficiente", content = {
+                            @Content(mediaType = "application/json", schema = @Schema(implementation = CustomExceptionBody.class))
+                    })
     })
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('ADMIN') or (hasAuthority('MIN_ACCESS') and #id == authentication.principal.id)")
     public ResponseEntity<Void> delete(@PathVariable Long id){
         service.deleteById(id);
         return ResponseEntity.noContent().build();
     }
 
-    @Operation(summary = "Atualiza um usuário", description = "Muda a senha de um usuário encontrado pelo Id.", responses = {
+    @Operation(summary = "Atualiza um usuário", description = "Muda a senha de um usuário encontrado pelo Id.",
+            security = @SecurityRequirement(name = "security"),
+            responses = {
             @ApiResponse(responseCode = "204", description = "Atualizado com sucesso", content = {
                     @Content(mediaType = "application/json", schema = @Schema(implementation = Void.class))
             }),
@@ -103,11 +118,12 @@ public class UserController {
             @ApiResponse(responseCode = "404", description = "Usuário não encontrado", content = {
                     @Content(mediaType = "application/json", schema = @Schema(implementation = CustomExceptionBody.class))
             }),
-            @ApiResponse(responseCode = "403", description = "Acesso negado.", content = {
-                    @Content(schema = @Schema(implementation = Void.class))
+            @ApiResponse(responseCode = "403", description = "Usuário possui permissão insuficiente.", content = {
+                    @Content(schema = @Schema(implementation = CustomExceptionBody.class))
             })
     })
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('MIN_ACCESS', 'ADMIN') and #id == authentication.principal.id")
     public ResponseEntity<Void> update(@PathVariable Long id, @RequestBody @Valid UserChangePasswordDto dto){
         service.updatePasswordById(id, dto.getCurrentPassword(), dto.getNewPassword(), dto.getConfirmPassword());
         return ResponseEntity.noContent().build();

@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -21,6 +22,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<CustomExceptionBody> userNotFoundException(UserNotFoundException e, HttpServletRequest request){
         CustomExceptionBody ex = new CustomExceptionBody(request, HttpStatus.NOT_FOUND, e.getMessage());
         return ResponseEntity.status(404).body(ex);
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<CustomExceptionBody> accessDeniedException(AccessDeniedException e, HttpServletRequest request){
+        CustomExceptionBody ex = new CustomExceptionBody(request, HttpStatus.FORBIDDEN, e.getMessage());
+        return ResponseEntity.status(403).body(ex);
     }
 
     @ExceptionHandler(DuplicatedEmailException.class)
