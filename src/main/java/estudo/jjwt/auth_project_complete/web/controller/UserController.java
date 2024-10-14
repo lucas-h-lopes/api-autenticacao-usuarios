@@ -1,6 +1,7 @@
 package estudo.jjwt.auth_project_complete.web.controller;
 
 import estudo.jjwt.auth_project_complete.entity.User;
+import estudo.jjwt.auth_project_complete.jwt.JwtUserDetails;
 import estudo.jjwt.auth_project_complete.service.UserService;
 import estudo.jjwt.auth_project_complete.web.dto.UserChangePasswordDto;
 import estudo.jjwt.auth_project_complete.web.dto.UserCreateDto;
@@ -18,6 +19,7 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -127,6 +129,13 @@ public class UserController {
     public ResponseEntity<Void> update(@PathVariable Long id, @RequestBody @Valid UserChangePasswordDto dto){
         service.updatePasswordById(id, dto.getCurrentPassword(), dto.getNewPassword(), dto.getConfirmPassword());
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/restricted-info")
+    public ResponseEntity<User> getPrincipalInformations(@AuthenticationPrincipal JwtUserDetails details){
+        return ResponseEntity.ok(service.findById(details.getId()));
+        // o @AuthenticationPrincipal é utilizado para retornar um objeto
+        // que implementa a interface UserDetails (representa o usuário autenticado no sistema)
     }
 
 }
