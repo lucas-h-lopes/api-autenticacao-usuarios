@@ -2,6 +2,7 @@ package estudo.jjwt.auth_project_complete.service;
 
 import estudo.jjwt.auth_project_complete.entity.User;
 import estudo.jjwt.auth_project_complete.repository.UserRepository;
+import estudo.jjwt.auth_project_complete.repository.projection.UserProjection;
 import estudo.jjwt.auth_project_complete.service.exception.DbException;
 import estudo.jjwt.auth_project_complete.service.exception.DuplicatedEmailException;
 import estudo.jjwt.auth_project_complete.service.exception.InvalidPasswordException;
@@ -9,13 +10,12 @@ import estudo.jjwt.auth_project_complete.service.exception.UserNotFoundException
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -52,8 +52,8 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
-    public List<User> findAll() {
-        return repository.findAll();
+    public Page<UserProjection> findAll(Pageable page) {
+        return repository.findAllPageable(page);
     }
 
     @Transactional
