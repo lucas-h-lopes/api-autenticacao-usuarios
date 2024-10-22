@@ -12,6 +12,8 @@ import estudo.jjwt.auth_project_complete.web.exception.CustomExceptionBody;
 import estudo.jjwt.auth_project_complete.web.mapper.PageableMapper;
 import estudo.jjwt.auth_project_complete.web.mapper.UserMapper;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -22,13 +24,12 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
-
-import java.util.List;
 
 @RequestMapping("/api/v2/users")
 @RestController
@@ -62,6 +63,14 @@ public class UserController {
 
     @Operation(summary = "Lista todos os usuários", description = "Retorna todos os usuários cadastrados no banco de dados.",
             security = @SecurityRequirement(name = "security"),
+            parameters = {
+                    @Parameter(in = ParameterIn.QUERY, name = "page", description = "Representa a página atual da listagem",
+                            content = @Content(schema = @Schema(type = "integer", defaultValue = "0"))),
+                    @Parameter(in = ParameterIn.QUERY, name = "size", description = "Representa a quantidade de elementos listados por página",
+                            content = @Content(schema = @Schema(type = "integer", defaultValue = "5"))),
+                    @Parameter(in = ParameterIn.QUERY, hidden = true, name = "sort", description = "Representa os critérios de ordenação da listagem",
+                            array = @ArraySchema(schema = @Schema(type = "string", defaultValue = "id,asc")))
+            },
             responses = {
                     @ApiResponse(responseCode = "200", description = "Sucesso!", content = {
                             @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = UserResponseDto.class)))
@@ -72,7 +81,7 @@ public class UserController {
             })
     @GetMapping
     @PreAuthorize("hasAuthority('ADMIN')")
-    public ResponseEntity<PageableDto> getAll(Pageable page) {
+    public ResponseEntity<PageableDto> getAll(@Parameter(hidden = true) @PageableDefault(size = 5) Pageable page) {
         Page<UserProjection> usersPage = service.findAll(page);
         return ResponseEntity.ok(PageableMapper.toDto(usersPage));
     }
